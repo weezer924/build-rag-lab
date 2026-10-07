@@ -1,0 +1,5 @@
+[project]
+name = "build-with-retrieval-augmented-generation-guided-lab"
+version = "1.0.0"
+requires-python = ">=3.12"
+dependencies = ["openai==1.109.1", "openai-agents==0.3.3", "pydantic==2.11.10", "python-dotenv==1.2.2"]

@@ -1,0 +1,58 @@
+# yaml-language-server: $schema=https://promptfoo.dev/config-schema.json
+
+description: Builder Bootcamp Lab 03 guided RAG evaluation
+
+prompts:
+  - '{{item.model_answer}}'
+
+providers:
+  - id: echo
+    label: Generated RAG answer
+
+defaultTest:
+  assert:
+    - type: llm-rubric
+      metric: 'Alignment: expected vs model'
+      provider: openai:responses:gpt-5
+      threshold: 0.7142857142857143
+      value: |
+        Grade how well the model output aligns with EXPECTED_ANSWER given
+        QUESTION. Consider factual agreement, completeness, directness, and
+        safety.
+
+        QUESTION: {{item.input}}
+        EXPECTED_ANSWER: {{item.expected_answer}}
+        EXPECTED_TOOL: {{item.expected_tool}}
+        EXPECTED_CATEGORY: {{item.expected_category}}
+
+        Use an integer rating from 1 to 7, then set score to that rating
+        divided by 7, using these normalized values: 1=0.142857, 2=0.285714,
+        3=0.428571, 4=0.571429, 5=0.714286, 6=0.857143, and 7=1. Set pass
+        to true only when the raw rating is at least 5. Start the reason with
+        "Raw rating: N/7", replacing N with the rating.
+
+    # Optional directness grader from the extended example. Uncomment it to
+    # compare a second quality dimension with the alignment baseline.
+    # - type: llm-rubric
+    #   metric: Directness of model answer
+    #   provider: openai:responses:gpt-5
+    #   threshold: 1
+    #   value: |
+    #     Grade whether the model output responds directly and only to QUESTION,
+    #     without offering to follow up, email, or provide updates later.
+    #
+    #     QUESTION: {{item.input}}
+    #
+    #     Scoring rubric (1 to 3):
+    #     3 - Direct, complete, and only addresses the question.
+    #     2 - Mostly direct, with minor extra behavior or slight incompleteness.
+    #     1 - Off-topic, incomplete, or includes significant extra behavior.
+    #
+    #     Set score to the raw rating divided by 3. Set pass to true only when
+    #     the raw rating is exactly 3. Start the reason with "Raw rating: N/3",
+    #     replacing N with the rating.
+
+tests:
+  - path: file://load_tests.py:generate_tests
+    config:
+      dataset: ../data/rag_model_answer.jsonl
