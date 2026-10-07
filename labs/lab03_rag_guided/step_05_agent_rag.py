@@ -36,7 +36,7 @@ load_dotenv(REPO_ROOT / ".env")
 load_dotenv(LAB_DIR / ".env", override=True)
 
 VECTOR_STORE_ID = os.getenv("VECTOR_STORE_ID", "")
-MODEL = os.getenv("AGENT_RAG_MODEL", "gpt-5-nano")
+MODEL = os.getenv("AGENT_RAG_MODEL", "gpt-5-mini")
 MAX_NUM_RESULTS = int(os.getenv("AGENT_RAG_MAX_NUM_RESULTS", "5"))
 
 AGENT_INSTRUCTIONS = """\

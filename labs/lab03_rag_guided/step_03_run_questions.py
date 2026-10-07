@@ -64,7 +64,7 @@ load_dotenv(_ROOT_ENV_PATH)
 load_dotenv(_RAG_ENV_PATH, override=True)
 
 # Configurable knobs with environment fallbacks
-MODEL = os.getenv("MODEL", "gpt-5-nano")
+MODEL = os.getenv("MODEL", "gpt-5-mini")
 EFFORT = os.getenv("EFFORT", "medium")
 NUM_QUESTIONS = int(os.getenv("NUM_QUESTIONS", "11"))
 MAX_NUM_RESULTS = int(os.getenv("MAX_NUM_RESULTS", "5"))
@@ -179,7 +179,7 @@ def ask_question(
         tools=[
             {
                 "type": "file_search",
-                "vector_store_ids": [VECTOR_STORE_ID],
+                "vector_store_ids": [VECTOR_STORE_ID],  # retrieve the info as a tool
                 "max_num_results": max_num_results,
             }
         ],

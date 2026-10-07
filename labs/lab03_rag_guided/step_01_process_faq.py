@@ -62,7 +62,7 @@ except ImportError:
     raise ImportError("Please install the OpenAI Python SDK: pip install openai -U")
 
 # Use the latest model available for best extraction quality
-MODEL = "gpt-5-nano"
+MODEL = "gpt-5-mini"
 
 
 def _get_paths() -> tuple[str, str]:
