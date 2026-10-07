@@ -21,7 +21,6 @@ from typing import Any
 
 from dotenv import load_dotenv
 
-
 LAB_DIRECTORY = Path(__file__).resolve().parent
 ROOT_DIRECTORY = LAB_DIRECTORY.parent.parent
 DEFAULT_DATA_FILE = LAB_DIRECTORY.parent / "data" / "rag_model_answer.jsonl"
@@ -52,9 +51,7 @@ def _promptfoo_result_issues(payload: Any) -> list[str]:
             return
         metadata = grading_result.get("metadata")
         if isinstance(metadata, dict) and metadata.get("graderError") is True:
-            issues.append(
-                str(grading_result.get("reason") or "A model grader failed.")
-            )
+            issues.append(str(grading_result.get("reason") or "A model grader failed."))
         component_results = grading_result.get("componentResults")
         if isinstance(component_results, list):
             for component_result in component_results:
@@ -72,8 +69,12 @@ def _promptfoo_result_issues(payload: Any) -> list[str]:
             # also populate row.error; only that known case is non-operational.
             failure_reason = row.get("failureReason")
             if failure_reason == 2:
-                issues.append(str(row_error or "Promptfoo reported an evaluation error."))
-            elif row_error and not (type(failure_reason) is int and failure_reason == 1):
+                issues.append(
+                    str(row_error or "Promptfoo reported an evaluation error.")
+                )
+            elif row_error and not (
+                type(failure_reason) is int and failure_reason == 1
+            ):
                 issues.append(str(row_error))
             response = row.get("response")
             if isinstance(response, dict) and response.get("error"):

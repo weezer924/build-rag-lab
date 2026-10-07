@@ -59,7 +59,7 @@ def build_lookup_tool(
     *,
     vector_store_id: str = VECTOR_STORE_ID,
     max_num_results: int = MAX_NUM_RESULTS,
-) -> "FileSearchTool":
+) -> FileSearchTool:
     """Create the hosted lookup tool for the configured OpenAI vector store."""
 
     if not vector_store_id:
@@ -91,7 +91,7 @@ def build_agent(
     model: str = MODEL,
     vector_store_id: str = VECTOR_STORE_ID,
     max_num_results: int = MAX_NUM_RESULTS,
-) -> "Agent":
+) -> Agent:
     """Build an FAQ agent that can autonomously call the vector-store lookup."""
 
     try:

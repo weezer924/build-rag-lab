@@ -9,7 +9,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const packageDir = path.join(root, 'node_modules', 'promptfoo');
 const args = process.argv.slice(2);
 if (!['view', 'eval', 'validate', '--version', '--help'].includes(args[0]) ||
-    args.some(arg => /^(?:--view|--watch)(?:=|$)/.test(arg))) {
+  args.some(arg => /^(?:--view|--watch)(?:=|$)/.test(arg))) {
   console.error('Use this lab launcher for eval, validate, --version, or view. Start the viewer with its separate view command.');
   process.exit(1);
 }

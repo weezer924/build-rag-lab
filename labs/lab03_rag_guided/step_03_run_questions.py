@@ -42,11 +42,10 @@ Output:
 
 from __future__ import annotations
 
+import json
+import os
 import sys
 import uuid
-import os
-import json
-from typing import List, Optional, Tuple, Dict
 
 from dotenv import load_dotenv
 
@@ -95,7 +94,8 @@ if not VECTOR_STORE_ID:
     # Exit the script to prevent accidental runs without a valid vector store
     sys.exit(1)
 
-def load_questions_from_jsonl(file_path: str, limit: int) -> List[str]:
+
+def load_questions_from_jsonl(file_path: str, limit: int) -> list[str]:
     """Load up to `limit` question strings from a JSONL dataset.
 
     Input lines should look like: {"item": {"input": "...", ...}}. The
@@ -117,7 +117,7 @@ def load_questions_from_jsonl(file_path: str, limit: int) -> List[str]:
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"JSONL file not found: {file_path}")
 
-    questions: List[str] = []
+    questions: list[str] = []
     with open(file_path, "r", encoding="utf-8") as file_handle:
         for raw_line in file_handle:
             if len(questions) >= limit:
@@ -140,14 +140,14 @@ def load_questions_from_jsonl(file_path: str, limit: int) -> List[str]:
 
     if not questions:
         raise ValueError(
-            "No valid questions found in the JSONL file. Ensure lines have {\"item\": {\"input\": \"...\"}}"
+            'No valid questions found in the JSONL file. Ensure lines have {"item": {"input": "..."}}'
         )
 
     return questions
 
 
 def ask_question(
-    client: "OpenAI",
+    client: OpenAI,
     question: str,
     run_uuid: str,
     model: str,
@@ -178,7 +178,7 @@ def ask_question(
 
 def write_model_answers_to_jsonl(
     input_file_path: str,
-    qa_pairs: List[Tuple[str, Optional[str]]],
+    qa_pairs: list[tuple[str, str | None]],
     output_file_path: str,
 ) -> int:
     """Write an augmented JSONL with model answers added to each dataset item.
@@ -205,9 +205,10 @@ def write_model_answers_to_jsonl(
         os.makedirs(output_dir, exist_ok=True)
 
     lines_written = 0
-    with open(input_file_path, "r", encoding="utf-8") as source_handle, open(
-        output_file_path, "w", encoding="utf-8"
-    ) as dest_handle:
+    with (
+        open(input_file_path, "r", encoding="utf-8") as source_handle,
+        open(output_file_path, "w", encoding="utf-8") as dest_handle,
+    ):
         for raw_line in source_handle:
             if lines_written >= len(qa_pairs):
                 break
@@ -217,7 +218,7 @@ def write_model_answers_to_jsonl(
                 continue
 
             try:
-                payload: Dict[str, object] = json.loads(line)
+                payload: dict[str, object] = json.loads(line)
             except json.JSONDecodeError:
                 # Skip malformed lines rather than aborting
                 continue
@@ -247,7 +248,7 @@ def write_model_answers_to_jsonl(
     return lines_written
 
 
-def run(questions: List[str]) -> None:
+def run(questions: list[str]) -> None:
     """Run questions for a single model and write the augmented JSONL output."""
     if OpenAI is None:
         raise ImportError("Please install the OpenAI Python SDK: pip install -U openai")
@@ -263,7 +264,7 @@ def run(questions: List[str]) -> None:
     print(f"Vector Store ID: {VECTOR_STORE_ID}")
     print(f"Max file results: {MAX_NUM_RESULTS}")
 
-    answers: List[Tuple[str, Optional[str]]] = []
+    answers: list[tuple[str, str | None]] = []
     for index, q in enumerate(questions, start=1):
         print("\n" + "=" * 80)
         print(f"Q{index}: {q}")
@@ -290,9 +291,12 @@ def run(questions: List[str]) -> None:
             OUTPUT_FILE,
         )
         print("\n" + "-" * 80)
-        print(f"Wrote {num_written} augmented item(s) with model answers to: {OUTPUT_FILE}")
+        print(
+            f"Wrote {num_written} augmented item(s) with model answers to: {OUTPUT_FILE}"
+        )
     except Exception as write_error:
         print(f"Error writing augmented JSONL: {write_error}")
+
 
 if __name__ == "__main__":
     # Load questions directly from the configured dataset file

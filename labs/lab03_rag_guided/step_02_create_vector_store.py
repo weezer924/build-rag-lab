@@ -26,23 +26,24 @@ Usage (from the bundle root):
     python labs/lab03_rag_guided/step_02_create_vector_store.py
 """
 
-#TODO - complete these then rerun the script:
-#1) Read `labs/lab03_rag_guided/README.md` (Indexing & file content) to understand how Step 2 fits the flow.
-#2) Review `_ensure_vector_store` and `_upsert_items_from_jsonl` to confirm how files are attached
+# TODO - complete these then rerun the script:
+# 1) Read `labs/lab03_rag_guided/README.md` (Indexing & file content) to understand how Step 2 fits the flow.
+# 2) Review `_ensure_vector_store` and `_upsert_items_from_jsonl` to confirm how files are attached
 #   and re‑uploaded if they already exist.
-#3) Research chunking and overlap in Vector Stores/File Search:
+# 3) Research chunking and overlap in Vector Stores/File Search:
 #   - Define what chunking and overlap are and why they matter for long documents.
 #   - Explain why chunk tuning is unnecessary for short, single‑QA `.md` files in this exercise.
 #   - List 2–3 scenarios where you would tune chunk size/overlap.
-#4) OPTIONAL: Advanced, bring in a large document required to be chunked and see how it works.
+# 4) OPTIONAL: Advanced, bring in a large document required to be chunked and see how it works.
 
-import os
+import hashlib
 import io
 import json
-import hashlib
+import os
 import re
-from datetime import datetime, timezone
-from typing import Optional, Dict, Any, Iterable
+from collections.abc import Iterable
+from datetime import UTC, datetime
+from typing import Any
 
 try:
     from openai import OpenAI
@@ -65,6 +66,7 @@ load_dotenv(_ROOT_ENV_PATH)
 # Then load lab-local `.env` for VECTOR_STORE_ID and overrides.
 load_dotenv(_RAG_ENV_PATH, override=True)
 
+
 def _default_jsonl_path() -> str:
     """Return the absolute path to `labs/data/faq_example.jsonl`.
 
@@ -74,7 +76,9 @@ def _default_jsonl_path() -> str:
     return os.path.join(base_dir, "data", "faq_example.jsonl")
 
 
-def _ensure_vector_store(client: OpenAI, vector_store_id: Optional[str], name: Optional[str]) -> str:
+def _ensure_vector_store(
+    client: OpenAI, vector_store_id: str | None, name: str | None
+) -> str:
     """
     Resolve and return a usable Vector Store id, creating a new one if needed.
 
@@ -102,8 +106,10 @@ def _ensure_vector_store(client: OpenAI, vector_store_id: Optional[str], name: O
         print(f"Using provided vector_store_id: {vector_store_id}")
         return vector_store_id
 
-    #create a new vector store
-    store_name = name or f"faq-example-store-{datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S')}"
+    # create a new vector store
+    store_name = (
+        name or f"faq-example-store-{datetime.now(UTC).strftime('%Y%m%d-%H%M%S')}"
+    )
     vs = client.vector_stores.create(name=store_name)
     print(f"Created vector store: {vs.id} ({store_name})")
 
@@ -119,22 +125,28 @@ def _ensure_vector_store(client: OpenAI, vector_store_id: Optional[str], name: O
         # Ensure current process also has the id available
         os.environ["VECTOR_STORE_ID"] = vs.id
     except Exception as write_error:
-        print(f"Warning: failed to write VECTOR_STORE_ID to {_RAG_ENV_PATH}: {write_error}")
+        print(
+            f"Warning: failed to write VECTOR_STORE_ID to {_RAG_ENV_PATH}: {write_error}"
+        )
 
     return vs.id
 
 
-def _list_vector_store_files_by_filename(client: OpenAI, vector_store_id: str) -> Dict[str, str]:
+def _list_vector_store_files_by_filename(
+    client: OpenAI, vector_store_id: str
+) -> dict[str, str]:
     """List files attached to a Vector Store and map `filename -> file_id`.
 
     Paginates through attachments, retrieves each file object to read its canonical filename,
     and returns a dictionary useful for idempotent upserts (detecting and replacing existing files).
     """
-    filename_to_file_id: Dict[str, str] = {}
+    filename_to_file_id: dict[str, str] = {}
     after = None
     while True:
         try:
-            page = client.vector_stores.files.list(vector_store_id=vector_store_id, limit=100, after=after)
+            page = client.vector_stores.files.list(
+                vector_store_id=vector_store_id, limit=100, after=after
+            )
         except Exception as error:
             print(f"Could not list vector store files: {error}")
             break
@@ -149,7 +161,9 @@ def _list_vector_store_files_by_filename(client: OpenAI, vector_store_id: str) -
                 continue
             try:
                 file_obj = client.files.retrieve(file_id)
-                filename = getattr(file_obj, "filename", None) or getattr(file_obj, "name", None)
+                filename = getattr(file_obj, "filename", None) or getattr(
+                    file_obj, "name", None
+                )
                 if filename:
                     filename_to_file_id[filename] = file_id
             except Exception as warn:
@@ -191,7 +205,7 @@ def _item_filename(question: str) -> str:
     return f"faq_{slug}_{digest}.md"
 
 
-def _iter_jsonl_items(jsonl_path: str) -> Iterable[Dict[str, Any]]:
+def _iter_jsonl_items(jsonl_path: str) -> Iterable[dict[str, Any]]:
     """Yield parsed JSON objects for each non‑empty line in a JSONL file.
 
     Lines that fail to parse are skipped with a console warning to avoid aborting the run.
@@ -207,7 +221,7 @@ def _iter_jsonl_items(jsonl_path: str) -> Iterable[Dict[str, Any]]:
                 print(f"Skipping invalid JSONL line: {error}")
 
 
-def _build_markdown_content(item: Dict[str, Any], source_filename: str) -> str:
+def _build_markdown_content(item: dict[str, Any], source_filename: str) -> str:
     """Render a single FAQ item into concise markdown for File Search indexing.
 
     The content is intentionally short and self‑contained (one Q/A per file). This keeps
@@ -217,7 +231,10 @@ def _build_markdown_content(item: Dict[str, Any], source_filename: str) -> str:
     question = str(payload.get("input", "")).strip()
     answer = str(payload.get("expected_answer", "")).strip()
     category = str(payload.get("expected_category", "unknown")).strip() or "unknown"
-    expected_tool = str(payload.get("expected_tool", "knowledge_assistant")).strip() or "knowledge_assistant"
+    expected_tool = (
+        str(payload.get("expected_tool", "knowledge_assistant")).strip()
+        or "knowledge_assistant"
+    )
 
     lines = [
         f"Category: {category}",
@@ -232,7 +249,9 @@ def _build_markdown_content(item: Dict[str, Any], source_filename: str) -> str:
     return "\n".join(lines)
 
 
-def _upsert_items_from_jsonl(client: OpenAI, vector_store_id: str, jsonl_path: str) -> int:
+def _upsert_items_from_jsonl(
+    client: OpenAI, vector_store_id: str, jsonl_path: str
+) -> int:
     """
     Read items from `jsonl_path` and upsert them into the given Vector Store.
 
@@ -266,21 +285,29 @@ def _upsert_items_from_jsonl(client: OpenAI, vector_store_id: str, jsonl_path: s
         # If exists, remove from vector store and delete the file object
         existing_id = existing_by_name.get(filename)
         if existing_id:
-            print(f"Deleting existing file '{filename}' (file_id={existing_id}) before upserting...")
+            print(
+                f"Deleting existing file '{filename}' (file_id={existing_id}) before upserting..."
+            )
             try:
-                client.vector_stores.files.delete(vector_store_id=vector_store_id, file_id=existing_id)
+                client.vector_stores.files.delete(
+                    vector_store_id=vector_store_id, file_id=existing_id
+                )
             except Exception as warn:
-                print(f"Warning: failed to detach existing file {filename} from vector store: {warn}")
+                print(
+                    f"Warning: failed to detach existing file {filename} from vector store: {warn}"
+                )
             try:
                 client.files.delete(existing_id)
             except Exception as warn:
-                print(f"Warning: failed to delete existing file object {existing_id}: {warn}")
+                print(
+                    f"Warning: failed to delete existing file object {existing_id}: {warn}"
+                )
             existing_by_name.pop(filename, None)
 
         # Prepare content and upload a fresh file
         content = _build_markdown_content(obj, source_filename)
         data = io.BytesIO(content.encode("utf-8"))
-        data.name = filename  
+        data.name = filename
 
         try:
             uploaded = client.files.create(file=data, purpose="assistants")
@@ -303,7 +330,11 @@ def _upsert_items_from_jsonl(client: OpenAI, vector_store_id: str, jsonl_path: s
     return submitted_count
 
 
-def run(jsonl_path: Optional[str] = None, vector_store_id: Optional[str] = None, store_name: Optional[str] = None) -> Optional[str]:
+def run(
+    jsonl_path: str | None = None,
+    vector_store_id: str | None = None,
+    store_name: str | None = None,
+) -> str | None:
     """
     Ingest `faq_example.jsonl` into an OpenAI Vector Store for File Search.
 
