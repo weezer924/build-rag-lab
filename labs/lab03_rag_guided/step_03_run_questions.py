@@ -170,7 +170,20 @@ def ask_question(
     )
 
     response = client.responses.create(
-        ...  # placeholder for parameters
+        model=model,
+        reasoning={"effort": effort},
+        input=[
+            {"role": "system", "content": system_message},
+            {"role": "user", "content": question},
+        ],
+        tools=[
+            {
+                "type": "file_search",
+                "vector_store_ids": [VECTOR_STORE_ID],
+                "max_num_results": max_num_results,
+            }
+        ],
+        metadata={"run_uuid": run_uuid},
     )
 
     return response.output_text.strip()
